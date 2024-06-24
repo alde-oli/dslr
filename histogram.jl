@@ -13,40 +13,36 @@ Ravenclaw = filter(row -> occursin("Ravenclaw", row."Hogwarts House"), df)
 Hufflepuff = filter(row -> occursin("Hufflepuff", row."Hogwarts House"), df)
 
 
+courses = names(df)[7:end]
 
-course = "Divination"
+hists = []
 
+for course in courses
+    local g_arithmancy = filter(row -> !ismissing(row[course]), Gryffindor)
+    local s_arithmancy = filter(row -> !ismissing(row[course]), Slytherin)
+    local r_arithmancy = filter(row -> !ismissing(row[course]), Ravenclaw)
+    local h_arithmancy = filter(row -> !ismissing(row[course]), Hufflepuff)
 
-g_arithmancy = filter(row -> !ismissing(row[:, "Divination"]), Gryffindor)
-s_arithmancy = filter(row -> !ismissing(row."Divination"), Slytherin)
-r_arithmancy = filter(row -> !ismissing(row."Divination"), Ravenclaw)
-h_arithmancy = filter(row -> !ismissing(row."Divination"), Hufflepuff)
-
-# Divination histogram
-# Create a histogram of the Divination column for Gryffindor with 20 bins
-# Calculate the ratio of the range (max - min) to the number of bins for all the houses
-# Use this ratio to create histograms with the same bar width for all the houses
-# The histogram uses percentage values on the y-axis rather than counts
-test = histogram(g_arithmancy."Divination", bins=20, label="Gryffindor", alpha=0.5, title="Divination Histogram", xlabel="Divination", ylabel="Frequency", legend=:topleft, normed=true)
+    push!(hists, histogram(g_arithmancy[!, course], bins=20, label="Gryffindor", alpha=0.5, title=course, xlabel=course, ylabel="Frequency", legend=:topleft, normed=true))
 
 
-g_ratio = (maximum(g_arithmancy."Divination") - minimum(g_arithmancy."Divination")) 
-s_ratio = (maximum(s_arithmancy."Divination") - minimum(s_arithmancy."Divination")) 
-r_ratio = (maximum(r_arithmancy."Divination") - minimum(r_arithmancy."Divination")) 
-h_ratio = (maximum(h_arithmancy."Divination") - minimum(h_arithmancy."Divination")) 
+    local g_ratio = (maximum(g_arithmancy[!, course]) - minimum(g_arithmancy[!, course]))
+    local s_ratio = (maximum(s_arithmancy[!, course]) - minimum(s_arithmancy[!, course]))
+    local r_ratio = (maximum(r_arithmancy[!, course]) - minimum(r_arithmancy[!, course]))
+    local h_ratio = (maximum(h_arithmancy[!, course]) - minimum(h_arithmancy[!, course]))
 
-s_bins = round(Int,s_ratio / g_ratio * 20)
-r_bins = round(Int,r_ratio / g_ratio * 20)
-h_bins = round(Int,h_ratio / g_ratio * 20)
+    local s_bins = round(Int, s_ratio / g_ratio * 20)
+    local r_bins = round(Int, r_ratio / g_ratio * 20)
+    local h_bins = round(Int, h_ratio / g_ratio * 20)
 
-histogram!(s_arithmancy."Divination", bins=s_bins, label="Slytherin", alpha=0.5, normed=true)
-histogram!(r_arithmancy."Divination", bins=r_bins, label="Ravenclaw", alpha=0.5, normed=true)
-histogram!(h_arithmancy."Divination", bins=h_bins, label="Hufflepuff", alpha=0.5, normed=true)
+    histogram!(s_arithmancy[!, course], bins=s_bins, label="Slytherin", alpha=0.5, normed=true)
+    histogram!(r_arithmancy[!, course], bins=r_bins, label="Ravenclaw", alpha=0.5, normed=true)
+    histogram!(h_arithmancy[!, course], bins=h_bins, label="Hufflepuff", alpha=0.5, normed=true)
 
 
-# we will have multiple plots in the same picture, so we need to use the plot function
-plot(test, histogram(g_arithmancy."Divination", bins=20, label="Gryffindor", alpha=0.5, title="Divination Histogram", xlabel="Divination", ylabel="Frequency", legend=:topleft, normed=true))
-
+    # we will have multiple plots in the same picture, so we need to use the plot function
+end
+plot(hists..., size=(1500, 1500))
 
 
 
