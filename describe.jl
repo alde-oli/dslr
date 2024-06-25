@@ -2,13 +2,16 @@ using CSV
 using DataFrames
 using Dates
 
+
 function extract_second_type(::Vector{Union{Missing,T}}) where {T}
     return T
 end
 
+
 function clean(n::Number)
     return string(round(n, sigdigits=7))
 end
+
 
 function percentile(p, data, len)
     k = (len - 1) * p + 1
@@ -20,6 +23,7 @@ function percentile(p, data, len)
         return data[f] * (c - k) + data[c] * (k - f)
     end
 end
+
 
 function column_means(df::DataFrame)
     means = ["mean"]
@@ -41,26 +45,25 @@ function column_means(df::DataFrame)
         min = col[1]
         max = min
         for val in col
-            if min > val
-                min = val
-            end
-            if max < val
-                max = val
-            end
+            min = min > val ? val : min
+            max = max < val ? val : max
         end
         col_s = sort(col)
         median = percentile(0.5, col_s, len)
         quarter1 = percentile(0.25, col_s, len)
         quarter2 = percentile(0.75, col_s, len)
+
         push!(quarter1s, clean(quarter1))
         push!(quarter2s, clean(quarter2))
 
         push!(counts, string(len))
         mean = sum(col) / len
+
         push!(means, clean(mean))
         push!(mins, clean(min))
         push!(maxs, clean(max))
         push!(medians, clean(median))
+
         std = 0
         foreach(x -> std += (x - mean)^2, col)
         std = sqrt(std / len)
@@ -80,12 +83,11 @@ data = select(CSV.read(ARGS, DataFrame), Not(1))
 
 data.days = Dates.value.(data.Birthday)
 
-numerical_cols = filter(col -> eltype(data[!, col]) <: Union{Missing,Number}, names(data))
-data = select(data, numerical_cols)
+data = select(data, filter(col -> eltype(data[!, col]) <: Union{Missing,Number}, names(data)))
 
 describe = DataFrame([name => [] for name in  ["", names(data)...]])
 
-
 push!(describe, column_means(data)...)
+
 
 println(describe)
