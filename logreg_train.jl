@@ -1,16 +1,28 @@
 using CSV
 using DataFrames
+using Dates
+using Base.Threads: @threads, nthreads
 
 
-function extract_second_type(::Vector{Union{Missing, T}}) where {T}
+# struct to store weights and what the model is trying to predict
+mutable struct Model
+	house::String
+	weights::Array{Float64, 1}
+
+	function Model(house::String, len::Int)
+		new(house, zeros(len))
+	end
+end
+
+
+# made to get the non Missing type of a Unions because somehow when you remove missings you still can't cast into the other type of the Union
+function get_second_type(::Vector{Union{Missing, T}}) where {T}
 	return T
 end
 
 
-
-
-
-function column_means(df::DataFrame)
+# returns 3 arrays with the means, mins and maxs of the columns
+function cols_stats(df::DataFrame)
 	means = []
 	mins = []
 	maxs = []
@@ -19,36 +31,30 @@ function column_means(df::DataFrame)
 		temp_df = df[.!ismissing.(df[!, name]), :]
 		col = temp_df[!, name]
 		if eltype(col) isa Union
-			col = convert(Vector{extract_second_type(col)}, temp_df[!, name])
-		end
-		if !(eltype(col) <: Number)
+			col = convert(Vector{get_second_type(col)}, temp_df[!, name])
+		elseif !(eltype(col) <: Number)
 			push!(means, 0)
 			push!(mins, 0)
 			push!(maxs, 0)
 			continue
 		end
-		len = length(col)
 		min = col[1]
 		max = min
 		for val in col
 			min = min > val ? val : min
 			max = max < val ? val : max
 		end
-
-		mean = sum(col) / len
-
-		push!(means, mean)
+		push!(means, sum(col) / length(col))
 		push!(mins, min)
 		push!(maxs, max)
-
 	end
 	return means, mins, maxs
 end
 
 
+# replaces missing values with the mean of the column and normalizes the values
 function preprocess_data(df::DataFrame)
-
-	means, mins, maxs = column_means(df)
+	means, mins, maxs = cols_stats(df)
 
 	for student in eachrow(df)
 		for (index, name) in enumerate(names(student))
@@ -60,83 +66,104 @@ function preprocess_data(df::DataFrame)
 			end
 		end
 	end
+	return df
 end
 
 
-
-function sigmoid(courses::Vector{Union{Missing, Float64}}, weights::Vector{Float64})
-	1 / (2.72^-(sum(courses .* weights)))
+# the great sigmoid function
+function sigmoid(courses::Vector, weights::Vector{Float64})
+	return 1 / (1 + exp(-sum(courses .* weights)))
 end
 
 
-function sigmoid(courses::Vector{Float64}, weights::Vector{Float64})
-	1 / (2.72^-(sum(courses .* weights)))
-end
-
-
+# check if there is one argument
 if length(ARGS) != 1
 	println("Invalid number of arguments")
 	exit(1)
+elseif !isfile(ARGS[1]) || !occursin(r".csv$", ARGS[1])
+	println("Invalid file")
+	exit(1)
 end
 
-data = CSV.read(ARGS, DataFrame)
+
+# choose the columns to exclude and the hyperparameters
+excluded_columns = ["Potions", "Care of Magical Creatures", "Arithmancy", "Index", "First Name", "Last Name", "Birthday", "Best Hand"]
 learning_rate = 0.1
-iterations = 1000
+iterations = 500
 
-mutable struct model
-	house::String
-	weights::Array{Float64, 1}
 
-	function model(house::String)
-		new(house, zeros(length(names(data)) - 1))
-	end
-end
-
-data = select!(data, Not([:"Potions", :"Care of Magical Creatures", :"Arithmancy", :"Index", :"First Name", :"Last Name", :"Birthday", :"Best Hand"]));
-num_courses = length(names(data)) - 1
+data = preprocess_data(select!(CSV.read(ARGS, DataFrame), Not(excluded_columns)))
+num_courses = size(data, 2) - 1
 len = size(data, 1)
+models = [Model("Gryffindor", num_courses), Model("Slytherin", num_courses), Model("Ravenclaw", num_courses), Model("Hufflepuff", num_courses)]
 
-preprocess_data(data)
 
-models = [model("Gryffindor"), model("Slytherin"), model("Ravenclaw"), model("Hufflepuff")]
-
-for itr in 1:iterations
-	for m in models
-		temp_model = model("")
-
-		for i in 1:num_courses
-			sum_diff_weight = 0
-			for student in eachrow(data)
-				target = m.house == student."Hogwarts House" ? 1 : 0
-				grades = [student[2:end]...]
-				diff = (sigmoid(grades, m.weights) - target)
-				sum_diff_weight += diff * student[i+1]
-				# sum_diff_bias += diff
+# training function using gradient descent and logistic regression
+function train(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64, iterations::Int)
+	for itr in 1:iterations
+		@threads for m in models
+			temp_model = Model(m.house, num_courses)
+	
+			for i in 1:num_courses
+				sum_diff_weight = 0
+				for student in eachrow(data)
+					target = m.house == student."Hogwarts House" ? 1 : 0
+					grades = [student[2:end]...]
+					diff = (sigmoid(grades, m.weights) - target)
+					sum_diff_weight += diff * student[i+1]
+				end
+				temp_model.weights[i] = learning_rate / len * sum_diff_weight
 			end
-			temp_model.weights[i] = learning_rate / len * sum_diff_weight
+			m.weights .-= temp_model.weights
 		end
-
-		m.weights .-= temp_model.weights
-
 	end
 end
 
-success = 0
 
-for student in eachrow(data)
-    best_house = ""
-    best_weight = 0
-    for m in models
-        grades = [student[2:end]...]
-
-        weight = sigmoid(grades, m.weights)
-        if weight > best_weight
-            best_house = m.house
-            best_weight = weight
+# training function using gradient descent and logistic regression
+function train_BGD(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64, iterations::Int)
+    for itr in 1:iterations
+        @threads for m in models
+            temp_weights = zeros(Float64, num_courses)
+            
+            for student in eachrow(data)
+                target = m.house == student."Hogwarts House" ? 1 : 0
+                grades = [student[2:end]...]
+                prediction = sigmoid(grades, m.weights)
+                error = prediction - target
+                temp_weights .+= error * grades
+            end
+            m.weights .-= learning_rate * temp_weights / len
         end
     end
-    global success += best_house == student."Hogwarts House"
-
 end
-println(success)
-println(models)
+
+
+# function to calculate the accuracy of the model
+function accuracy(models::Array{Model, 1}, data::DataFrame)
+	success = 0
+
+	for student in eachrow(data)
+		best_house = ""
+		best_weight = 0
+		for m in models
+			grades = [student[2:end]...]
+			weight = sigmoid(grades, m.weights)
+			if weight > best_weight
+				best_house = m.house
+				best_weight = weight
+			end
+		end
+		success += best_house == student."Hogwarts House"
+	end
+	return success / size(data, 1)
+end
+
+
+
+start = now()
+
+train(models, data, learning_rate, iterations)
+
+println("training time: ", now() - start)
+println("accuracy = ", accuracy(models, data))
