@@ -36,6 +36,4 @@ for course in courses
 end
 
 plot(hists..., size=(1500, 1500))
-savefig("plots/histogram_arithmancy.png")
-
-
+savefig("plots/histogram.png")
