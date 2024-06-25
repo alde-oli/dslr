@@ -64,13 +64,13 @@ end
 
 
 
-function sigmoid(courses::Vector{Union{Missing, Float64}}, weights::Vector{Float64}, bias::Float64)
-	1 / (2.72^-(sum(courses .* weights) + bias))
+function sigmoid(courses::Vector{Union{Missing, Float64}}, weights::Vector{Float64})
+	1 / (2.72^-(sum(courses .* weights)))
 end
 
 
-function sigmoid(courses::Vector{Float64}, weights::Vector{Float64}, bias::Float64)
-	1 / (2.72^-(sum(courses .* weights) + bias))
+function sigmoid(courses::Vector{Float64}, weights::Vector{Float64})
+	1 / (2.72^-(sum(courses .* weights)))
 end
 
 
@@ -83,31 +83,20 @@ data = CSV.read(ARGS, DataFrame)
 learning_rate = 0.1
 iterations = 1000
 
-
-
 mutable struct model
 	house::String
 	weights::Array{Float64, 1}
-	bias::Float64
 
 	function model(house::String)
-		new(house, zeros(length(names(data)) - 1), 0)
+		new(house, zeros(length(names(data)) - 1))
 	end
 end
-
 
 data = select!(data, Not([:"Potions", :"Care of Magical Creatures", :"Arithmancy", :"Index", :"First Name", :"Last Name", :"Birthday", :"Best Hand"]));
 num_courses = length(names(data)) - 1
 len = size(data, 1)
 
 preprocess_data(data)
-
-
-println(describe(data))
-# preprocessing: replace 'missing' with average
-# current norm method: between 0 and 1 by offset and division
-
-# models: 4 houses, weight for each course and bias
 
 models = [model("Gryffindor"), model("Slytherin"), model("Ravenclaw"), model("Hufflepuff")]
 
@@ -117,18 +106,14 @@ for itr in 1:iterations
 
 		for i in 1:num_courses
 			sum_diff_weight = 0
-			sum_diff_bias = 0
 			for student in eachrow(data)
 				target = m.house == student."Hogwarts House" ? 1 : 0
 				grades = [student[2:end]...]
-				diff = (sigmoid(grades, m.weights, m.bias) - target)
+				diff = (sigmoid(grades, m.weights) - target)
 				sum_diff_weight += diff * student[i+1]
 				# sum_diff_bias += diff
 			end
 			temp_model.weights[i] = learning_rate / len * sum_diff_weight
-			temp_model.bias = learning_rate / len * sum_diff_bias
-			m.bias -= sum_diff_bias
-
 		end
 
 		m.weights .-= temp_model.weights
@@ -144,18 +129,12 @@ for student in eachrow(data)
     for m in models
         grades = [student[2:end]...]
 
-        weight = sigmoid(grades, m.weights, m.bias)
-        # println(weight)
+        weight = sigmoid(grades, m.weights)
         if weight > best_weight
-            # println("SET HOUSE ", m.house)
             best_house = m.house
             best_weight = weight
         end
     end
-    # println(best_house, student."Hogwarts House")
-    # println( best_house === student."Hogwarts House")
-    # println(best_house, " vs ", student."Hogwarts House")
-    # println(best_house == student."Hogwarts House")
     global success += best_house == student."Hogwarts House"
 
 end
