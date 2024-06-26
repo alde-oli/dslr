@@ -30,7 +30,7 @@ for course1 in courses
             local r_arithmancy = filter(row -> !ismissing(row[course]), Ravenclaw)
             local h_arithmancy = filter(row -> !ismissing(row[course]), Hufflepuff)
 
-            push!(scatter_plots, histogram(g_arithmancy[!, course], bins=20, label="Gryffindor", alpha=0.5, title=course, xlabel=course, ylabel="Frequency", legend=:topleft, normed=true, fillcolor=:red))
+            push!(scatter_plots, histogram(g_arithmancy[!, course], bins=20, label="Gryffindor", alpha=0.5, title=course, ylabel="Frequency", legend=:topleft, normed=true, fillcolor=:red))
 
             local g_ratio = (maximum(g_arithmancy[!, course]) - minimum(g_arithmancy[!, course]))
             local s_ratio = (maximum(s_arithmancy[!, course]) - minimum(s_arithmancy[!, course]))
@@ -47,7 +47,6 @@ for course1 in courses
         else
             scatter_plot = scatter(data[!, course1], data[!, course2],
                 title=course1 * " vs " * course2,
-                xlabel=course1, ylabel=course2,
                 label="",
                 markersize=5,
                 markercolor=[category_colors[row."Hogwarts House"] for row in eachrow(data)],

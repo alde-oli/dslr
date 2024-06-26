@@ -2,8 +2,12 @@ using CSV
 using DataFrames
 using Dates
 using Base.Threads: @threads, nthreads
+using StatsBase
+using Random
+
 using Plots
 using StatsPlots
+
 include("src/Model.jl")
 include("src/data.jl")
 include("src/train.jl")
@@ -14,7 +18,9 @@ excluded_columns = ["Potions", "Care of Magical Creatures", "Arithmancy", "Index
 learning_rate = 0.1
 iterations = 500
 training_function = "train_bgd" # options: "train", "train_bgd", "train_sgd"
-record_rate = 0
+Random.seed!(555)
+train_diff_data = false
+record_rate = 1
 
 
 # check if there is one argument and if it is a valid csv file
@@ -28,6 +34,17 @@ end
 
 
 data = preprocess_data(select!(CSV.read(ARGS, DataFrame), Not(excluded_columns)))
+
+total_rows = nrow(data)
+n = Int(total_rows * 3 / 4)
+random_indices = sample(1:total_rows, n, replace=false)
+removed_indices = setdiff(1:total_rows, random_indices)
+data_test = data
+if train_diff_data
+	data_test = data[removed_indices, :]
+	data = data[random_indices, :]
+end
+
 num_courses = size(data, 2) - 1
 len = size(data, 1)
 models = [Model("Gryffindor", num_courses), Model("Slytherin", num_courses), Model("Ravenclaw", num_courses), Model("Hufflepuff", num_courses)]
@@ -62,5 +79,5 @@ end
 
 # print the results
 println("training time: ", stop - start)
-println("accuracy = ", accuracy(models, data, ))
+println("accuracy = ", accuracy(models, data_test))
 println(models)
