@@ -6,4 +6,7 @@ mutable struct Model
 	function Model(house::String, len::Int)
 		new(house, zeros(len))
 	end
+	function Model(house::String15, weights::Vector{Float64})
+		new(house, weights)
+	end
 end

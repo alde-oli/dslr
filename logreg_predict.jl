@@ -1,40 +1,42 @@
 using CSV
 using DataFrames
+using Base.Threads: @threads, nthreads
 
 include("src/data.jl")
+include("src/Model.jl")
+include("src/train.jl")
 
 
 if length(ARGS) != 2
-	println("Invalid number of arguments")
-	exit(1)
+    println("Invalid number of arguments")
+    exit(1)
 elseif !isfile(ARGS[1]) || !occursin(r".csv$", ARGS[1]) || !isfile(ARGS[2]) || !occursin(r".csv$", ARGS[2])
-	println("Invalid file")
-	exit(1)
+    println("Invalid file")
+    exit(1)
 end
 
 excluded_columns = ["Potions", "Care of Magical Creatures", "Arithmancy", "Index", "First Name", "Last Name", "Birthday", "Best Hand"]
 
 data = preprocess_data(select!(CSV.read(ARGS[1], DataFrame), Not(excluded_columns)))
 
-# Read the CSV file into a DataFrame
 df = CSV.read("models_output.csv", DataFrame)
 
-# Extract data from the DataFrame
-houses = df.house
-num_courses = ncol(df) - 1  # Determine the number of weight columns
+models = convert_df_models(df)
 
-weights = []
-for i in 1:num_courses
-    push!(weights, df[!, "weight_$i"])
+output = DataFrame("Index" => Int[], "Hogwarts House" => String15[])
+
+for (index, student) in enumerate(eachrow(data))
+    best_house = ""
+    best_weight = 0
+    for m in models
+        grades = [student[2:end]...]
+        weight = sigmoid(grades, m.weights)
+        if weight > best_weight
+            best_house = m.house
+            best_weight = weight
+        end
+    end
+    push!(output, (index - 1, best_house))
 end
 
-# Create an array of Model instances
-models = []
-for i in 1:nrow(df)
-    house = houses[i]
-    model_weights = [weights[j][i] for j in 1:num_courses]
-    push!(models, Model(house, model_weights))
-end
-
-# Print the array of models (optional)
-println(models)
+CSV.write("houses.csv", output)
