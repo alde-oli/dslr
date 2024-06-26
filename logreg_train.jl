@@ -73,4 +73,21 @@ end
 # print the results
 println("training time: ", now() - start)
 println("accuracy = ", accuracy(models, data_test))
-println(models)
+
+# Extract data from models
+houses = [model.house for model in models]
+weights = [model.weights for model in models]
+
+# Create a DataFrame
+df = DataFrame(house = houses)
+
+# Add weight columns to the DataFrame
+for i in 1:num_courses
+    df[!, "weight_$i"] = [weights[j][i] for j in 1:length(models)]
+end
+
+# Print the DataFrame
+println(df)
+
+# Write the DataFrame to a CSV file
+CSV.write("models_output.csv", df)
