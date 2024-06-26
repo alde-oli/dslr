@@ -34,6 +34,7 @@ function train(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64,
 	
 			for i in 1:num_courses
 				sum_diff_weight = 0
+
 				for student in eachrow(data)
 					target = m.house == student."Hogwarts House" ? 1 : 0
 					grades = [student[2:end]...]
@@ -52,8 +53,31 @@ function train(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64,
 end
 
 
-# training function using gradient descent and logistic regression
-function train_BGD(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64, iterations::Int, record_rate::Int=0)
+# training function using stochastic gradient descent and logistic regression
+function train_sgd(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64, iterations::Int, record_rate::Int=0)
+    recorded_accuracy = []
+    len = size(data, 1)
+    for itr in 1:iterations
+        for student in eachrow(data)
+			@threads for m in models
+				target = m.house == student."Hogwarts House" ? 1 : 0
+				grades = [student[2:end]...]
+				prediction = sigmoid(grades, m.weights)
+				error = prediction - target
+				m.weights .-= learning_rate * error * grades
+			end
+			if record_rate > 0 && itr % record_rate == 0
+				push!(recorded_accuracy, accuracy(models, data))
+			end
+		end
+    end
+    return recorded_accuracy
+end
+
+
+
+# training function using batch gradient descent and logistic regression
+function train_bgd(models::Array{Model, 1}, data::DataFrame, learning_rate::Float64, iterations::Int, record_rate::Int=0)
 	recorded_accuracy = []
 	len = size(data, 1)
     for itr in 1:iterations

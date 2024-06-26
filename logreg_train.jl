@@ -17,7 +17,7 @@ include("src/train.jl")
 excluded_columns = ["Potions", "Care of Magical Creatures", "Arithmancy", "Index", "First Name", "Last Name", "Birthday", "Best Hand"]
 learning_rate = 0.1
 iterations = 500
-training_function = "train_BGD"
+training_function = "train_bgd" # options: "train", "train_bgd", "train_sgd"
 Random.seed!(555)
 train_diff_data = false
 record_rate = 1
@@ -55,23 +55,30 @@ start = now()
 # choose the training function and train the models
 if training_function == "train"
 	accuracies = train(models, data, learning_rate, iterations, record_rate)
-elseif training_function == "train_BGD"
-	accuracies = train_BGD(models, data, learning_rate, iterations, record_rate)
+elseif training_function == "train_bgd"
+	accuracies = train_bgd(models, data, learning_rate, iterations, record_rate)
+elseif training_function == "train_sgd"
+	accuracies = train_sgd(models, data, learning_rate, iterations, record_rate)
 else
 	println("Invalid training function")
 	exit(1)
 end
 
+stop = now()
+ 
 
 # plot the accuracy
 if accuracies != []
-	plot(1:record_rate:iterations, accuracies, xlabel="Iterations", ylabel="Accuracy", title="Accuracy over time", legend=false, size=(4000, 4000))
+	if training_function == "train_sgd"
+		iterations *= len
+	end
+	plot(1:record_rate:iterations, accuracies, xlabel="Iterations", ylabel="Accuracy", title="Accuracy over time", legend=false, size=(1000,1000))
 	savefig("plots/accuracy.png")
 end
 
 
 # print the results
-println("training time: ", now() - start)
+println("training time: ", stop - start)
 println("accuracy = ", accuracy(models, data_test))
 
 # Extract data from models
