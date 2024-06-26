@@ -3,7 +3,7 @@ using CSV
 using Plots
 using Plots.PlotMeasures
 
-file_path = "../datasets/dataset_train.csv"
+file_path = "datasets/dataset_train.csv"
 df = CSV.read(file_path, DataFrame)
 
 courses = names(df)[7:end]

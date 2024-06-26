@@ -5,6 +5,9 @@ using Base.Threads: @threads, nthreads
 using StatsBase
 using Random
 
+using Plots
+using StatsPlots
+
 include("src/Model.jl")
 include("src/data.jl")
 include("src/train.jl")
@@ -17,6 +20,8 @@ iterations = 500
 training_function = "train_BGD"
 Random.seed!(555)
 train_diff_data = false
+record_rate = 1
+
 
 # check if there is one argument and if it is a valid csv file
 if length(ARGS) != 1
@@ -26,6 +31,7 @@ elseif !isfile(ARGS[1]) || !occursin(r".csv$", ARGS[1])
 	println("Invalid file")
 	exit(1)
 end
+
 
 data = preprocess_data(select!(CSV.read(ARGS, DataFrame), Not(excluded_columns)))
 
@@ -43,38 +49,26 @@ num_courses = size(data, 2) - 1
 len = size(data, 1)
 models = [Model("Gryffindor", num_courses), Model("Slytherin", num_courses), Model("Ravenclaw", num_courses), Model("Hufflepuff", num_courses)]
 
-# function to calculate the accuracy of the model
-function accuracy(models::Array{Model, 1}, data::DataFrame)
-	success = 0
-
-	for student in eachrow(data)
-		best_house = ""
-		best_weight = 0
-		for m in models
-			grades = [student[2:end]...]
-			weight = sigmoid(grades, m.weights)
-			if weight > best_weight
-				best_house = m.house
-				best_weight = weight
-			end
-		end
-		success += best_house == student."Hogwarts House"
-	end
-	return success / size(data, 1)
-end
-
 
 start = now()
 
 # choose the training function and train the models
 if training_function == "train"
-	train(models, data, learning_rate, iterations)
+	accuracies = train(models, data, learning_rate, iterations, record_rate)
 elseif training_function == "train_BGD"
-	train_BGD(models, data, learning_rate, iterations)
+	accuracies = train_BGD(models, data, learning_rate, iterations, record_rate)
 else
 	println("Invalid training function")
 	exit(1)
 end
+
+
+# plot the accuracy
+if accuracies != []
+	plot(1:record_rate:iterations, accuracies, xlabel="Iterations", ylabel="Accuracy", title="Accuracy over time", legend=false, size=(4000, 4000))
+	savefig("plots/accuracy.png")
+end
+
 
 # print the results
 println("training time: ", now() - start)

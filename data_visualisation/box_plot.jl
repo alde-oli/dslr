@@ -3,7 +3,7 @@ using DataFrames
 using Plots
 using StatsPlots
 
-file_path = "../datasets/dataset_train.csv"
+file_path = "datasets/dataset_train.csv"
 df = CSV.read(file_path, DataFrame)
 
 Gryffindor = filter(row -> occursin("Gryffindor", row."Hogwarts House"), df)
