@@ -1,17 +1,7 @@
 <!-- YoRHa archive -->
-```
-▸ YoRHa // ARCHIVE — DSLR
-```
+<p align="center"><img src=".github/yorha-header.svg" width="100%" alt="YoRHa // ARCHIVE — dslr · Type: 42 Lausanne project · team (2) · Stack: Julia · CSV.jl · DataFrames.jl · StatsBase.jl · Plots.jl / StatsPlots.jl · Status: ■ COMPLETE"></p>
 
 "Datascience x Logistic Regression": a one-vs-all logistic regression, written from scratch in Julia, that sorts Hogwarts students into their houses from their course grades.
-
-![Julia](https://img.shields.io/badge/Julia-4e4b42?style=flat-square) ![42 Lausanne](https://img.shields.io/badge/42-Lausanne-dad4bb?style=flat-square)
-
-| UNIT DATA | |
-|---|---|
-| Type | 42 Lausanne project · team (2) |
-| Stack | Julia · CSV.jl · DataFrames.jl · StatsBase.jl · Plots.jl / StatsPlots.jl |
-| Status | ■ COMPLETE |
 
 ## ▸ Overview
 The data exploration comes first: a hand-written `describe` (count, mean, std, min, quartiles, max, with no stats library) and plots to find which courses separate the houses best.
