@@ -40,7 +40,7 @@ The hyperparameters (learning rate, iterations, training function, excluded cour
 ## ▸ Squad
 From the git history (lines added per file):
 - **alde-oli** (Alexandre): the three training loops (`src/train.jl`), histogram and box plot, accuracy tracking
-- David Vandenbrouck: `describe`, scatter plot, prediction script
+- David Vandenbrouck ([DavePie](https://github.com/DavePie)): `describe`, scatter plot, prediction script
 - Shared: `logreg_train.jl`, data loading and preprocessing (`src/data.jl`), pair plot
 
 ## ▸ Notes
